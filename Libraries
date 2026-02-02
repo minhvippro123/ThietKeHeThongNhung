@@ -1,0 +1,107 @@
+# Danh sách thư viện sử dụng
+
+Tài liệu này liệt kê toàn bộ các thư viện và phụ thuộc được sử dụng trong dự án, phân theo từng thành phần của hệ thống.
+
+---
+
+## 1. Website (Web Dashboard)
+
+Website chạy trực tiếp trên trình duyệt, không cần biên dịch.
+
+### Thư viện sử dụng
+- **Firebase JavaScript SDK (Realtime Database – compat v10)**
+  - File:
+    - `firebase-app-compat.js`
+    - `firebase-database-compat.js`
+  - Mục đích:
+    - Kết nối tới Firebase Realtime Database
+    - Đọc dữ liệu realtime của Node (Lux, mode, power, RGB, RSSI, timestamp)
+
+- **Chart.js**
+  - File:
+    - `chart.umd.min.js`
+  - Mục đích:
+    - Vẽ biểu đồ Lux và độ sáng (Brightness) theo thời gian
+
+### Mã nguồn tự viết
+- **JavaScript thuần (`app.js`)**
+  - Mục đích:
+    - Xử lý giao diện người dùng (HMI)
+    - Gửi lệnh điều khiển tới Gateway ESP32 thông qua HTTP API
+    - Đọc và đồng bộ dữ liệu từ Firebase
+    - Sử dụng cơ chế *hidden iframe queue* để gửi HTTP request không bị trình duyệt chặn
+
+---
+
+## 2. Gateway (ESP32)
+
+Gateway được lập trình bằng Arduino framework cho ESP32.
+
+### Thư viện sử dụng
+- **WiFi.h**
+  - Mục đích:
+    - Kết nối ESP32 vào mạng Wi-Fi
+    - Truy cập Internet để đồng bộ dữ liệu với Cloud
+
+- **WebServer.h**
+  - Mục đích:
+    - Tạo HTTP server nội bộ trên ESP32
+    - Cung cấp các API điều khiển cho Website
+
+- **Firebase ESP Client (`Firebase_ESP_Client`)**
+  - Mục đích:
+    - Kết nối Firebase Realtime Database
+    - Ghi dữ liệu telemetry từ Node lên Cloud
+    - Đồng bộ trạng thái thiết bị
+
+- **LoRa.h**
+  - Mục đích:
+    - Giao tiếp với module LoRa (SX127x)
+    - Nhận dữ liệu telemetry từ Node
+    - Gửi lệnh điều khiển xuống Node
+
+- **SPI.h**
+  - Mục đích:
+    - Giao tiếp SPI giữa ESP32 và module LoRa
+
+---
+
+## 3. Node IoT (ARM – Raspberry Pi Pico W)
+
+Node IoT được lập trình bằng Arduino-Pico core / Pico SDK.
+
+### Thư viện sử dụng
+- **Wire.h**
+  - Mục đích:
+    - Giao tiếp I2C với cảm biến ánh sáng BH1750
+
+- **BH1750.h**
+  - Mục đích:
+    - Khởi tạo và đọc dữ liệu độ rọi ánh sáng (Lux) từ cảm biến BH1750
+
+- **SPI.h**
+  - Mục đích:
+    - Giao tiếp SPI với module LoRa
+
+- **LoRa.h**
+  - Mục đích:
+    - Truyền dữ liệu telemetry từ Node về Gateway
+    - Nhận lệnh điều khiển từ Gateway
+    - Truyền thông theo cơ chế RX polling
+
+- **Arduino Core / Pico SDK**
+  - Mục đích:
+    - Điều khiển GPIO
+    - Tạo PWM điều khiển LED RGB
+    - Cung cấp hàm thời gian (millis, delay)
+    - Triển khai vòng lặp không chặn và máy trạng thái (FSM)
+
+---
+
+## 4. Ghi chú
+
+- Dự án không sử dụng MQTT, truyền thông được thực hiện qua LoRa (Node ↔ Gateway) và HTTP/Firebase (Gateway ↔ Cloud).
+- Truyền thông LoRa sử dụng cơ chế RX polling, không dùng ngắt phần cứng.
+- Tất cả các thư viện đều là mã nguồn mở và phổ biến trong các dự án IoT nhúng.
+
+---
