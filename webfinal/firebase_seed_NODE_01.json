@@ -1,0 +1,27 @@
+{
+  "control": {
+    "mode": "MANUAL",
+    "power": false,
+    "bri": 120,
+    "r": 255,
+    "g": 0,
+    "b": 0,
+    "preset": "NONE",
+    "ts": 0
+  },
+  "state": {
+    "online": false,
+    "mode": "MANUAL",
+    "preset": "NONE",
+    "power": false,
+    "bri": 120,
+    "r": 255,
+    "g": 0,
+    "b": 0,
+    "lux": 0,
+    "wifi_rssi": 0,
+    "lora_rssi": 0,
+    "ts": 0
+  },
+  "history": {}
+}

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESP32 LED RGB Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">⚡</div>
+      <div>
+        <div class="title">ESP32 LED RGB Control</div>
+        <div class="subtitle">Web UI (Laptop) → Firebase RTDB → ESP32 → LoRa → Pico</div>
+      </div>
+    </div>
+
+    <div class="ipbox">
+      <span class="pill" id="pillFb">FB: ...</span>
+      <label class="inlinechk">
+        <input type="checkbox" id="useFb" checked />
+        <span>Dùng Firebase</span>
+      </label>
+
+      <label class="inlabel" for="ip">ESP32 IP</label>
+      <input id="ip" class="ipinput" inputmode="numeric" placeholder="192.168.100.13" />
+      <button id="btnSaveIp" class="btn btn-ghost">Lưu IP</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- POWER -->
+    <section class="card">
+      <div class="cardhead">
+        <h2>Bật / Tắt</h2>
+        <span class="pill" id="pillConn">Chưa test</span>
+      </div>
+
+      <div class="row">
+        <button id="btnOn" class="btn btn-primary">BẬT</button>
+        <button id="btnOff" class="btn btn-danger">TẮT</button>
+        <button id="btnPing" class="btn btn-ghost">Test kết nối</button>
+      </div>
+
+      <div class="log" id="log">—</div>
+      <div class="hint">Tip: Bản này <b>không ghi /control</b>. Nút bấm sẽ gọi HTTP tới ESP32, Firebase chỉ dùng để đọc HMI + chart.</div>
+    </section>
+
+    <!-- MODE -->
+    <section class="card">
+      <div class="cardhead">
+        <h2>Chế độ điều khiển</h2>
+      </div>
+
+      <div class="seg">
+        <button class="segbtn" data-ctl="AUTO">AUTO</button>
+        <button class="segbtn active" data-ctl="MANUAL">MANUAL</button>
+      </div>
+
+      <div class="hint">
+        <b>AUTO</b>: Pico tự bật/tắt theo BH1750 (sáng/tối).<br/>
+        <b>MANUAL</b>: Điều chỉnh màu/độ sáng/preset từ web.
+      </div>
+    </section>
+
+    <!-- PRESET -->
+    <section class="card">
+      <div class="cardhead">
+        <h2>Preset</h2>
+      </div>
+
+      <div class="row wrap">
+        <button class="btn btn-ghost" data-preset="STATIC">STATIC</button>
+        <button class="btn btn-ghost" data-preset="NIGHT">ĐÈN NGỦ (ẤM)</button>
+        <button class="btn btn-ghost" data-preset="MUSIC">NGHE NHẠC (RAINBOW)</button>
+      </div>
+
+      <div class="hint">
+        Preset chỉ có tác dụng khi Pico đang ở <b>MANUAL</b>. (MUSIC = rainbow loop)
+      </div>
+    </section>
+
+    <!-- RGB -->
+    <section class="card wide">
+      <div class="cardhead">
+        <h2>RGB</h2>
+        <div class="mini">
+          <span>R <b id="rv">255</b></span>
+          <span>G <b id="gv">0</b></span>
+          <span>B <b id="bv">0</b></span>
+          <span>BRI <b id="briv">120</b></span>
+        </div>
+      </div>
+
+      <div class="sliders">
+        <div class="sliderrow">
+          <span class="k r">R</span>
+          <input id="r" type="range" min="0" max="255" value="255" />
+        </div>
+        <div class="sliderrow">
+          <span class="k g">G</span>
+          <input id="g" type="range" min="0" max="255" value="0" />
+        </div>
+        <div class="sliderrow">
+          <span class="k b">B</span>
+          <input id="b" type="range" min="0" max="255" value="0" />
+        </div>
+        <div class="sliderrow">
+          <span class="k w">BRI</span>
+          <input id="bri" type="range" min="0" max="255" value="120" />
+        </div>
+      </div>
+
+      <div class="row wrap">
+        <button id="btnApply" class="btn btn-primary">ÁP DỤNG</button>
+        <button id="btnWhite" class="btn btn-ghost">TRẮNG</button>
+        <button id="btnWarm" class="btn btn-ghost">ẤM</button>
+        <button id="btnOff2" class="btn btn-ghost">TẮT</button>
+      </div>
+
+      <div class="preview">
+        <div class="swatch" id="swatch"></div>
+        <div class="previewtext">
+          <div class="p1">Preview</div>
+          <div class="p2" id="previewHex">#ff0000</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HMI: STATE + CHART -->
+    <section class="card wide">
+      <div class="cardhead">
+        <h2>HMI (Firebase)</h2>
+        <span class="pill" id="pillState">STATE: —</span>
+      </div>
+
+      <div class="hmiGrid">
+        <div class="hmiItem">
+          <div class="hmiK">Lux</div>
+          <div class="hmiV" id="vLux">—</div>
+        </div>
+        <div class="hmiItem">
+          <div class="hmiK">WiFi RSSI</div>
+          <div class="hmiV" id="vWiFi">—</div>
+        </div>
+        <div class="hmiItem">
+          <div class="hmiK">LoRa RSSI</div>
+          <div class="hmiV" id="vLoRa">—</div>
+        </div>
+        <div class="hmiItem">
+          <div class="hmiK">Mode</div>
+          <div class="hmiV" id="vMode">—</div>
+        </div>
+        <div class="hmiItem">
+          <div class="hmiK">Power</div>
+          <div class="hmiV" id="vPower">—</div>
+        </div>
+        <div class="hmiItem">
+          <div class="hmiK">Preset</div>
+          <div class="hmiV" id="vPreset">—</div>
+        </div>
+        <div class="hmiItem">
+          <div class="hmiK">TS</div>
+          <div class="hmiV" id="vTs">—</div>
+        </div>
+      </div>
+
+      <div class="chartWrap">
+        <canvas id="chartHistory" height="120"></canvas>
+      </div>
+
+      <div class="hint">
+        Chart đọc <code>/nodes/NODE_01/history</code> (limitToLast 300). ESP32 push 1 bản ghi mỗi 1–2s.
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="cardhead">
+        <h2>Phím nhanh</h2>
+      </div>
+      <ul class="list">
+        <li><b>W</b>: Trắng</li>
+        <li><b>N</b>: Đèn ngủ ấm</li>
+        <li><b>O</b>: Tắt</li>
+        <li><b>Enter</b>: Áp dụng</li>
+      </ul>
+      <div class="hint">Nếu bạn đang mở Serial Monitor cùng lúc: mỗi COM chỉ 1 app.</div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Control: <b>HTTP → ESP32</b></span>
+    <span class="dot">•</span>
+    <span>State path: <b>/nodes/NODE_01/state</b></span>
+    <span class="dot">•</span>
+    <span>Lưu IP trong LocalStorage</span>
+  </footer>
+
+<!-- Firebase (ONLY ONE VERSION: v10 compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Your config -->
+<script src="./firebase_config.js"></script>
+
+<!-- App -->
+<script src="./app.js"></script>
+
+</body>
+</html>
